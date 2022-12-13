@@ -1,0 +1,12 @@
+{
+  "name": "project_hex",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "^4.18.2",
+    "nodemon": "^2.0.20",
+    "socket.io": "^4.5.4"
+  },
+  "scripts": {
+    "dev": "npx nodemon index.js"
+  }
+}
