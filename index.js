@@ -23,7 +23,7 @@ const Key = {
 
 class Pion {
     constructor(type) {
-        this.cotes = Array(6),
+        this.cotes = Array(6)
 
     }
 }
