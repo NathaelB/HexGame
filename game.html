@@ -170,6 +170,8 @@
           case -8:
           case -9:
             return 'purple'
+          default:
+            return "yellow"
         }
       }
       function isBorder (pion) {
@@ -210,6 +212,9 @@
           if (isBorder(pion)) {
             console.log(mode(pion.neighboor))
             const color = selectColor(mode(pion.neighboor))
+            if (color === 'yellow') {
+
+            }
             const hexagon = d3.select('#h' + index)
               .attr('stroke', color)
           }
@@ -224,7 +229,7 @@
           const y = -Math.cos(angle) * rayon
           points.push([Math.round(x * 100) / 100, Math.round(y * 100) / 100]);
         }
-        console.log(points)
+        return points;
       }
 
 
@@ -235,7 +240,44 @@
         d3.select("#tablier").append("svg").attr("width", (nbLignes * 2) * 2 * rayon).attr("height", (nbLignes * 2) * 2 * rayon);
         const hexagone = creeHexagone(rayon);
         let decalage = 0;
-        for (var ligne = 0; ligne < nbLignes; ligne++) {
+        for (let colonne = 0; colonne < nbColonnes; colonne++) {
+          for (let ligne = 0; ligne < nbLignes; ligne++) {
+            var d = ""
+            var x,y;
+            for (h in hexagone) {
+              x = hexagone[h][0] + (rayon - distance) * (2 + decalage + ligne);
+              y = distance * 2 + hexagone[h][1] + (rayon - distance * 2) * (1 + 2 * ligne);
+              if (h == 0) d += "M" + x + "," + y + " L";
+              else d += x + "," + y + " ";
+            }
+            d += "Z";
+            d3.select('svg')
+              .append('path')
+              .attr("d", d).attr("stroke", "black").attr("fill", "white")
+              .attr("id", 'h' + (colonne * nbLignes + ligne))
+              .attr("data-x", x)
+              .attr("data-y", y)
+              .on("click", function(d) {
+                const id = d3.select(this).attr('id').split('h')[1]
+                console.log(id)
+                let type = null
+                for (let i = 0; i < checkBox.length; i++) {
+                  if (checkBox[i].checked) {
+                    type = checkBox[i].value
+                  }
+                }
+
+                socket.emit('pion', {
+                  case: id,
+                  player: localStorage.getItem('player'),
+                  type: type
+                })
+              });
+          }
+          decalage +=2
+        }
+
+        /*for (var ligne = 0; ligne < nbLignes; ligne++) {
             for (var colonne = 0; colonne < nbColonnes; colonne++) {
                 var d = "";
                 var x, y;
@@ -249,7 +291,7 @@
                 d3.select("svg")
                     .append("path")
                     .attr("d", d).attr("stroke", "black").attr("fill", "white")
-                    .attr("id", "h" + (ligne * 11 + colonne))
+                    .attr("id", "h" + (ligne * nbLignes + colonne))
                     .attr("data-x", x)
                     .attr("data-y", y)
                     .on("click", function(d) {
@@ -270,7 +312,7 @@
                     });
             }
             decalage += 2;
-        }
+        } */
       }
     </script>
 
