@@ -74,7 +74,7 @@ class Piece {
 function h_find_voisins (v) {
   return (p, id) => {
     for (const n in p.neighboor) {
-      if (v.find(element => element===n)) {
+      if (v.includes(n)) {
         return true
       }
     }
@@ -83,7 +83,7 @@ function h_find_voisins (v) {
 }
 
 function genererateurHELPER (s) {
-  if (!s || s[s.length -1][0] === 0) return BORDERS.INVALID_BORDER
+  if (!s.length || s[s.length -1][0] === 0) return BORDERS.INVALID_BORDER
   if (s[s.length - 1][1] === 0) {
     s.pop()
     return genererateurHELPER(s)
@@ -153,26 +153,27 @@ class Board {
     }
 
     const sides = 8*size -2
-    const res_sides = sides/(2*nbPlayers)
+    const res_sides = Math.floor(sides/(2*nbPlayers))
 
     const rc_A = []
     const rc_B = []
-    rc_A.push([0, sides - res_sides*2*nbPlayers + 1])
-    rc_B.push([0, sides - res_sides*2*nbPlayers + 1])
+
 
     for (let i = 0; i !== nbPlayers+1; i++) {
       rc_A.push([-i*2, res_sides])
       rc_B.push([-i*2 -1, res_sides])
     }
 
+    console.log(rc_A, rc_B, sides)
+
     //UP
     for (let i = 0; i !== size; ++i) {
       let data = this.m_board[i]
-
+      data.neighboor[1] = genererateurHELPER(rc_A);
       if (i !== size - 1) {
         data.neighboor[2] = genererateurHELPER(rc_A);
       }
-      data.neighboor[1] = genererateurHELPER(rc_A);
+
     }
 
     //RIGHT
@@ -180,7 +181,7 @@ class Board {
       let data = this.m_board[i*size + size - 1]
       data.neighboor[2] = genererateurHELPER(rc_A);
       data.neighboor[3] = genererateurHELPER(rc_A);
-    }/*
+    }
 
     //DOWN
     for (let i = size-1; i !== -1; --i) {
@@ -196,7 +197,7 @@ class Board {
         data.neighboor[5] = genererateurHELPER(rc_B);
       }
       data.neighboor[0] = genererateurHELPER(rc_B);
-    }*/
+    }
 
     return true
   }
@@ -209,14 +210,18 @@ class Board {
     if (origin >= this.m_board.length || origin < 0) return false
     if (type.length === 0) return false
 
-    const visited = Array(this.m_board.length)
+    const visited = [] //Array.from(this.m_board.length)
+    for (let i = 0; i < this.m_board.length; i++) {
+      visited.push(false)
+    }
+
     const l_s = []
     l_s.push(origin)
 
     while (!l_s.length) {
       const c_p = l_s.pop()
 
-      if (!type.find((item) => this.m_board[c_p].type === item)) continue
+      if (!type.includes(this.m_board[c_p].type)) continue
 
       if (arret(this.m_board[c_p], c_p)) return true
 
@@ -239,16 +244,12 @@ class Board {
 
     return this.cheminPossible(0, [PIECE_TYPE.EMPTY, PIECE_TYPE.RED, PIECE_TYPE.BLUE, PIECE_TYPE.GREEN, PIECE_TYPE.VIOLET, PIECE_TYPE.NW_SE_BRIDGE, PIECE_TYPE.W_E_BRIDGE, PIECE_TYPE.NE_SW_BRIDGE],
       (l_p, id) => {
-        let tmp_r = false
         for (const n in l_p.neighboor) {
           if (n === l_b1) {
-            tmp_r = true
-            break
+            return this.cheminPossible(id, type, h_find_voisins([l_b2]))
           }
         }
-        return !tmp_r
-          ? false
-          : this.cheminPossible(id, type, h_find_voisins([l_b2]))
+        return false
       }
     )
   }
@@ -314,7 +315,8 @@ class Board {
 
     // CHECK IF PLAYER WIN
     for (let p = 0; p !== this.m_nbPlayers; p++) {
-      if (this.isBorderConnected(-p*2, -1-p*2[p, PIECE_TYPE.NW_SE_BRIDGE, PIECE_TYPE.NE_SW_BRIDGE, PIECE_TYPE.W_E_BRIDGE] )) {
+      if (this.isBorderConnected(-p*2, -1-p*2,[p, PIECE_TYPE.NW_SE_BRIDGE, PIECE_TYPE.NE_SW_BRIDGE, PIECE_TYPE.W_E_BRIDGE])) {
+        console.log("test de victoire")
         if (this.m_admittedBridge[p-1] === 0) {
           this.m_actualPlayer = PLAYER_TYPE.NONE
           this.m_winner = p
@@ -449,7 +451,8 @@ io.on('connection', (socket) => {
         io.emit('pion', {
           id: id,
           player: iPlayer,
-          bridge: bridge.includes(data.type)
+          bridge: bridge.includes(data.type),
+          board: board.m_board
         })
       }
 
