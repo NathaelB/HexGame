@@ -11,112 +11,314 @@
 
 <body>
     <div>
-        <div id="info-player" class="flex flex-col">
-            <ul class="flex flex-col" id="liste_joueurs"></ul>
-        </div>
-        <div>
-            <button onclick="left()">
-                Clique moi
-            </button>
+        <header class="bg-gray-900 p-8">
+            <div class="flex items-start justify-between">
+                <div class="flex items-start gap-2">
+                    <div class="flex flex-col">
+                        <h3 class="text-2xl font-bold text-white">Listes des joueurs</h3>
+                        <ul class="flex flex-col text-gray-400" id="liste_joueurs"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-white">C'est au tour de :</h3>
+                        <span id="name_of_player" class="text-white"></span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2" id="actions">
+
+                </div>
+            </div>
+
+        </header>
+        <div class="p-8 flex flex-col">
+            <div class="">
+                <p>Vous êtes <span id="player"></span></p>
+            </div>
+            <div class="grid grid-cols-3">
+                <div class="flex flex-col gap-2 col-span-2">
+
+
+
+                    <div class="">
+                        <label class="text-base font-medium text-gray-900">Type de pion</label>
+                        <p class="text-sm leading-5 text-gray-500">How do you prefer to receive notifications?</p>
+                        <fieldset class="mt-4">
+                            <legend class="sr-only">Notification method</legend>
+                            <div class="space-y-4">
+                                <div class="flex items-center">
+                                    <input id="color" value="" name="type-selected" type="radio" checked class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <label for="color" class="ml-3 block text-sm font-medium text-gray-700">Couleur</label>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <input id="nw_se_bridge"  value="5" name="type-selected" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <label for="nw_se_bridge" class="ml-3 block text-sm font-medium text-gray-700">NW SE BRIDGE</label>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <input id="w_e_bridge" value="6" name="type-selected" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <label for="w_e_bridge" class="ml-3 block text-sm font-medium text-gray-700">W_E BRIDGE</label>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <input id="ne_sw_bridge" value="7" name="type-selected" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <label for="ne_sw_bridge" class="ml-3 block text-sm font-medium text-gray-700">NE SW BRIDGE</label>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div id="tablier"></div>
+                </div>
+                <div class="flex-1">
+                    <div class="flex flex-col gap-2 relative h-92 " id="messages">
+
+                    </div>
+                    <div class="w-full flex 1 border-t border-gray-300">
+                        <div class="w-full">
+                            <label for="chat" class="sr-only">Your message</label>
+                            <div class="flex items-center px-3 py-2 rounded-lg bg-gray-50">
+
+                                <textarea id="chat" rows="1" class="block mx-4 p-2.5 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 " placeholder="Your message..."></textarea>
+                                <button type="" class="inline-flex justify-center p-2 text-red-600 rounded-full cursor-pointer hover:bg-blue-100" onclick="sendMessage()">
+                                    <svg aria-hidden="true" class="w-6 h-6 rotate-90" fill="currentColor " viewBox="0 0 20 20 " xmlns="http://www.w3.org/2000/svg "><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1
+                                1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z "></path></svg>
+                                    <span class="sr-only ">Send message</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="tablier"></div>
+
     </div>
     <script>
         const socket = io()
         const infoPlayer = document.getElementById('liste_joueurs')
+        const actions = document.getElementById('actions')
+        const checkBox = document.getElementsByName('type-selected')
+        const infoPlayerPlay = document.getElementById('name_of_player')
+        const player = document.getElementById('player')
+
+        const resetChild = (element) => {
+          while (element.firstChild) {
+            element.removeChild(element.lastChild)
+          }
+        }
 
 
-        const couleurs = ['red', 'blue']
+        const start = () => {
+          socket.emit('start')
+        }
 
-        socket.emit('player_join', () => {
-            message: "Un joueur s'est connecté"
-        })
-
-        socket.on('response', (data) => {
-            if (!localStorage.getItem('player')) {
-                localStorage.setItem('player', data[data.length - 1].username)
+        socket.emit('join_resp')
+        socket.on('notif_join', (data) => {
+          console.log(data.players[data.players.length-1])
+          if (!localStorage.getItem('player')) {
+            localStorage.setItem('player', data.players[data.players.length-1].username)
+          }
+          player.innerHTML = localStorage.getItem('player')
+          resetChild(infoPlayer)
+          data.players.forEach((item) => {
+            const li = document.createElement('li')
+            infoPlayer.append(item.username, li)
+          })
+          if (data.players.length > 0) {
+            resetChild(actions)
+            const buttonLeft = document.createElement('button')
+            buttonLeft.className = 'inline-flex items-center text-red-100 rounded-md border border-red-400 bg-red-500 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+            buttonLeft.innerHTML = 'Supprimer la partie'
+            buttonLeft.onclick = () => {
+              left()
             }
-            console.log(localStorage.getItem('player'))
-            console.log(data);
-            //infoPlayer.innerHTML = ''
-
-            while (infoPlayer.firstChild) {
-                infoPlayer.removeChild(infoPlayer.lastChild)
+            if (data.players.length > 1) {
+              const button = document.createElement('button')
+              button.className = 'inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+              button.innerHTML = 'Lancer la partie'
+              button.onclick = () => {
+                start()
+              }
+              actions.append(button)
             }
-            data.forEach((item) => {
-
-                const li = document.createElement('li')
-                infoPlayer.append(item.username, li);
-            })
-        })
-
-        socket.on('start', (data) => {
-            console.log("The game start", data)
+            actions.append(buttonLeft)
+          }
+          console.log(data)
         })
 
         function left() {
-            localStorage.clear()
-            window.location.assign('/')
-
+            socket.emit('game_destroyed')
         }
+
+        socket.on('clear', () => {
+          localStorage.clear()
+          window.location.assign('/')
+        })
     </script>
     <script>
-        window.addEventListener('load', (event) => {
-            genereDamier(20, 11, 11);
-        });
-
-        function creeHexagone(rayon) {
-            let points = new Array();
-            for (var i = 0; i < 6; ++i) {
-                var angle = i * Math.PI / 3;
-                var x = Math.sin(angle) * rayon;
-                var y = -Math.cos(angle) * rayon;
-                points.push([Math.round(x * 100) / 100, Math.round(y * 100) / 100]);
-            }
-            return points;
+      const selectColor = (n) => {
+        switch (n) {
+          case -2:
+          case -3:
+            return 'red'
+          case -4:
+          case -5:
+            return 'blue'
+          case -6:
+          case -7:
+            return "green"
+          case -8:
+          case -9:
+            return 'purple'
         }
+      }
+      function isBorder (pion) {
+        for (let i = 0; i < pion.neighboor.length ; i++) {
+          if (Math.sign(pion.neighboor[i]) === -1) {
+            return true
+          }
+        }
+        return false
+      }
 
-        function genereDamier(rayon, nbLignes, nbColonnes) {
-            distance = rayon - (Math.sin(1 * Math.PI / 3) * rayon);
-            distance = distance * 1.5;
-            rayon = rayon * 1.5;
-            d3.select("#tablier").append("svg").attr("width", (nbLignes * 2) * 2 * rayon).attr("height", (nbLignes * 2) * 2 * rayon);
-            var hexagone = creeHexagone(rayon);
-            var decalage = 0;
-            for (var ligne = 0; ligne < nbLignes; ligne++) {
-                for (var colonne = 0; colonne < nbColonnes; colonne++) {
-                    var d = "";
-                    var x, y;
-                    for (h in hexagone) {
-                        x = hexagone[h][0] + (rayon - distance) * (2 + decalage + 1 * colonne);
-                        y = distance * 2 + hexagone[h][1] + (rayon - distance * 2) * (1 + 2 * colonne);
-                        if (h == 0) d += "M" + x + "," + y + " L";
-                        else d += x + "," + y + " ";
-                    }
-                    d += "Z";
-                    d3.select("svg")
-                        .append("path")
-                        .attr("d", d).attr("stroke", "black").attr("fill", "white")
-                        .attr("id", "h" + (ligne * 11 + colonne))
-                        .on("click", function(d) {
-                            const id = d3.select(this).attr('id').split('h')[1]
-                            console.log(id)
-                            socket.emit('pion', {
-                                case: id,
-                                player: localStorage.getItem('player')
-                            });
-                        });
+      function mode (array) {
+        let modeMap = {};
+        let maxEl = array[0], maxCount = 1;
+        for (let i = 0; i < array.length; i++) {
+          const el = array[i];
+          if(modeMap[el] == null)
+            modeMap[el] = 1;
+          else
+            modeMap[el]++;
+          if(modeMap[el] > maxCount)
+          {
+            maxEl = el;
+            maxCount = modeMap[el];
+          }
+        }
+        return maxEl
+
+      }
+      socket.on('start_game', (data) => {
+        console.log("The game start", data)
+        infoPlayerPlay.innerHTML = data.players[0].username
+        genereDamier(20, 5, 5)
+        if (isBorder(data.data[0])) {
+          console.log("test")
+        }
+        data.data.forEach((pion, index) => {
+          if (isBorder(pion)) {
+            console.log(mode(pion.neighboor))
+            const color = selectColor(mode(pion.neighboor))
+            const hexagon = d3.select('#h' + index)
+              .attr('stroke', color)
+          }
+        })
+      })
+
+      function creeHexagone(rayon) {
+        const points = []
+        for (let i = 0; i < 6; ++i) {
+          const angle = i * Math.PI / 3
+          const x = Math.sin(angle) * rayon
+          const y = -Math.cos(angle) * rayon
+          points.push([Math.round(x * 100) / 100, Math.round(y * 100) / 100]);
+        }
+        console.log(points)
+      }
+
+
+      function genereDamier(rayon, nbLignes, nbColonnes) {
+        let distance = rayon - (Math.sin(Math.PI / 3) * rayon);
+        distance = distance * 1.5;
+        rayon = rayon * 1.5;
+        d3.select("#tablier").append("svg").attr("width", (nbLignes * 2) * 2 * rayon).attr("height", (nbLignes * 2) * 2 * rayon);
+        const hexagone = creeHexagone(rayon);
+        let decalage = 0;
+        for (var ligne = 0; ligne < nbLignes; ligne++) {
+            for (var colonne = 0; colonne < nbColonnes; colonne++) {
+                var d = "";
+                var x, y;
+                for (h in hexagone) {
+                    x = hexagone[h][0] + (rayon - distance) * (2 + decalage + 1 * colonne);
+                    y = distance * 2 + hexagone[h][1] + (rayon - distance * 2) * (1 + 2 * colonne);
+                    if (h == 0) d += "M" + x + "," + y + " L";
+                    else d += x + "," + y + " ";
                 }
-                decalage += 2;
+                d += "Z";
+                d3.select("svg")
+                    .append("path")
+                    .attr("d", d).attr("stroke", "black").attr("fill", "white")
+                    .attr("id", "h" + (ligne * 11 + colonne))
+                    .attr("data-x", x)
+                    .attr("data-y", y)
+                    .on("click", function(d) {
+                        const id = d3.select(this).attr('id').split('h')[1]
+                        console.log(id)
+                        let type = null
+                        for (let i = 0; i < checkBox.length; i++) {
+                          if (checkBox[i].checked) {
+                            type = checkBox[i].value
+                          }
+                        }
+
+                        socket.emit('pion', {
+                            case: id,
+                            player: localStorage.getItem('player'),
+                            type: type
+                        })
+                    });
             }
+            decalage += 2;
         }
+      }
     </script>
 
     <script>
         socket.on('pion', (data) => {
-            console.log(data)
+          const hexagon = d3.select('#h' + data.id)
+            .attr('fill', data.player.type.toLowerCase())
+          console.log(data)
+
         })
+    </script>
+
+    <script>
+        const sendMessage = () => {
+          const chat = document.getElementById('chat')
+          console.log(chat.value)
+          socket.emit('send_message', {
+            player: localStorage.getItem('player'),
+            message: chat.value
+          })
+
+          chat.value = ''
+        }
+
+        socket.on('chat', (data) => {
+          const username = localStorage.getItem('player')
+          const messagesDOM = document.getElementById('messages')
+          console.log(data.messages)
+          resetChild(messagesDOM)
+          data.messages.forEach((message) => {
+            const div = document.createElement('div')
+            if (message.username === username) {
+              div.className = 'bg-green-300 w-1/3 p-2 flex flex-col right-0 top-0 rounded-md'
+            } else {
+              div.className = 'bg-gray-200 w-1/3 p-2 flex flex-col right-0 top-0 rounded-md'
+            }
+            const span = document.createElement('span')
+            span.innerHTML = message.username
+            span.className = 'text-gray-600 font-semibold text-sm'
+            const p = document.createElement('p')
+            p.className = 'text-gray-800'
+            p.innerHTML = message.body
+            div.append(span, p)
+            messagesDOM.append(div)
+          })
+        })
+
+
     </script>
 </body>
 

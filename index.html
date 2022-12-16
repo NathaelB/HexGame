@@ -69,12 +69,7 @@
         </main>
     </div>
     <script>
-
-
       const socket = io()
-      socket.on('entree', (data) => {
-        console.log(data)
-      })
 
       const play = () => {
         const username = document.getElementById('username').value
@@ -85,7 +80,6 @@
           window.location.assign('/game')
           return
         }
-        console.log("Enter username")
       }
     </script>
 </body>
