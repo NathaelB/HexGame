@@ -7,6 +7,17 @@ const server = http.createServer(app)
 const io = new require('socket.io')(server)
 
 
+function containsObject(obj, list) {
+  let i;
+  for (i = 0; i < list.length; i++) {
+    if (list[i] === obj) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 class Player {
   constructor(username, type) {
     this.username = username
@@ -74,7 +85,7 @@ class Piece {
 function h_find_voisins (v) {
   return (p, id) => {
     for (const n in p.neighboor) {
-      if (v.includes(n)) {
+      if (containsObject(n, v)) {
         return true
       }
     }
@@ -137,8 +148,8 @@ class Board {
     }
 
     for (let i = 0; i !== size*size ; i++) {
-      const y = i/size
-      const x = i % size
+      let y = i/size
+      let x = i % size
 
       let p = this.m_board[i]
 
@@ -152,11 +163,11 @@ class Board {
       p.type = PIECE_TYPE.EMPTY
     }
 
-    const sides = 8*size -2
-    const res_sides = Math.floor(sides/(2*nbPlayers))
+    let sides = 8*size -2
+    let res_sides = Math.floor(sides/(2*nbPlayers))
 
-    const rc_A = []
-    const rc_B = []
+    let rc_A = []
+    let rc_B = []
 
 
     for (let i = 0; i !== nbPlayers+1; i++) {
@@ -210,18 +221,19 @@ class Board {
     if (origin >= this.m_board.length || origin < 0) return false
     if (type.length === 0) return false
 
-    const visited = [] //Array.from(this.m_board.length)
+    let visited = [] //Array.from(this.m_board.length)
     for (let i = 0; i < this.m_board.length; i++) {
       visited.push(false)
     }
 
-    const l_s = []
+    let l_s = []
     l_s.push(origin)
 
-    while (!l_s.length) {
-      const c_p = l_s.pop()
+    while (l_s.length !== 0) {
+      let c_p = l_s.pop()
 
-      if (!type.includes(this.m_board[c_p].type)) continue
+      //if (!type.includes(this.m_board[c_p].type)) continue
+      if (!containsObject(this.m_board[c_p].type, type)) continue
 
       if (arret(this.m_board[c_p], c_p)) return true
 
