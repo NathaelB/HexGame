@@ -442,6 +442,7 @@ io.on('connection', (socket) => {
       const bridge = [5,6,7]
       const id = parseInt(data.case)
       const iPlayer = board.getPlayers().find((item) => item.username === data.player)
+      const players = board.getPlayers()
       const key = Object.keys(PLAYER_TYPE).find((item) => {
         if (item === iPlayer.type) return item
       })
@@ -450,7 +451,7 @@ io.on('connection', (socket) => {
       if (state) {
         io.emit('pion', {
           id: id,
-          player: iPlayer,
+          player: players[board.m_actualPlayer - 1],
           bridge: bridge.includes(data.type),
           board: board.m_board
         })

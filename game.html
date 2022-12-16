@@ -114,7 +114,6 @@
 
         socket.emit('join_resp')
         socket.on('notif_join', (data) => {
-          console.log(data.players[data.players.length-1])
           if (!localStorage.getItem('player')) {
             localStorage.setItem('player', data.players[data.players.length-1].username)
           }
@@ -122,7 +121,9 @@
           resetChild(infoPlayer)
           data.players.forEach((item) => {
             const li = document.createElement('li')
-            infoPlayer.append(item.username, li)
+            li.innerHTML = item.username
+            infoPlayer.append(li)
+            li.className = `text-${item.type.toLowerCase()}-500`
           })
           if (data.players.length > 0) {
             resetChild(actions)
@@ -143,7 +144,6 @@
             }
             actions.append(buttonLeft)
           }
-          console.log(data)
         })
 
         function left() {
@@ -185,9 +185,13 @@
 
       function mode (array) {
         let modeMap = {};
-        let maxEl = array[0], maxCount = 1;
-        for (let i = 0; i < array.length; i++) {
-          const el = array[i];
+        const newList = array.filter((item) => item < 0)
+        let maxEl = newList[0], maxCount = 1;
+        for (let i = 0; i < newList.length; i++) {
+          if (newList[i] >= 0) {
+            continue
+          }
+          const el = newList[i];
           if(modeMap[el] == null)
             modeMap[el] = 1;
           else
@@ -199,22 +203,16 @@
           }
         }
         return maxEl
-
       }
       socket.on('start_game', (data) => {
         console.log("The game start", data)
         infoPlayerPlay.innerHTML = data.players[0].username
         genereDamier(20, 5, 5)
-        if (isBorder(data.data[0])) {
-          console.log("test")
-        }
+
         data.data.forEach((pion, index) => {
           if (isBorder(pion)) {
-            console.log(mode(pion.neighboor))
             const color = selectColor(mode(pion.neighboor))
-            if (color === 'yellow') {
 
-            }
             const hexagon = d3.select('#h' + index)
               .attr('stroke', color)
           }
@@ -240,44 +238,9 @@
         d3.select("#tablier").append("svg").attr("width", (nbLignes * 2) * 2 * rayon).attr("height", (nbLignes * 2) * 2 * rayon);
         const hexagone = creeHexagone(rayon);
         let decalage = 0;
-        for (let colonne = 0; colonne < nbColonnes; colonne++) {
-          for (let ligne = 0; ligne < nbLignes; ligne++) {
-            var d = ""
-            var x,y;
-            for (h in hexagone) {
-              x = hexagone[h][0] + (rayon - distance) * (2 + decalage + ligne);
-              y = distance * 2 + hexagone[h][1] + (rayon - distance * 2) * (1 + 2 * ligne);
-              if (h == 0) d += "M" + x + "," + y + " L";
-              else d += x + "," + y + " ";
-            }
-            d += "Z";
-            d3.select('svg')
-              .append('path')
-              .attr("d", d).attr("stroke", "black").attr("fill", "white")
-              .attr("id", 'h' + (colonne * nbLignes + ligne))
-              .attr("data-x", x)
-              .attr("data-y", y)
-              .on("click", function(d) {
-                const id = d3.select(this).attr('id').split('h')[1]
-                console.log(id)
-                let type = null
-                for (let i = 0; i < checkBox.length; i++) {
-                  if (checkBox[i].checked) {
-                    type = checkBox[i].value
-                  }
-                }
 
-                socket.emit('pion', {
-                  case: id,
-                  player: localStorage.getItem('player'),
-                  type: type
-                })
-              });
-          }
-          decalage +=2
-        }
 
-        /*for (var ligne = 0; ligne < nbLignes; ligne++) {
+        for (var ligne = 0; ligne < nbLignes; ligne++) {
             for (var colonne = 0; colonne < nbColonnes; colonne++) {
                 var d = "";
                 var x, y;
@@ -291,7 +254,7 @@
                 d3.select("svg")
                     .append("path")
                     .attr("d", d).attr("stroke", "black").attr("fill", "white")
-                    .attr("id", "h" + (ligne * nbLignes + colonne))
+                    .attr("id", "h" + (colonne * nbLignes + ligne))
                     .attr("data-x", x)
                     .attr("data-y", y)
                     .on("click", function(d) {
@@ -312,7 +275,7 @@
                     });
             }
             decalage += 2;
-        } */
+        }
       }
     </script>
 
@@ -320,6 +283,7 @@
         socket.on('pion', (data) => {
           const hexagon = d3.select('#h' + data.id)
             .attr('fill', data.player.type.toLowerCase())
+          infoPlayerPlay.innerHTML = data.player.username
           console.log(data)
 
         })
