@@ -167,7 +167,6 @@ class Board {
       if (i !== size - 1) {
         data.neighboor[2] = genererateurHELPER(rc_A);
       }
-
     }
 
     //RIGHT
@@ -178,8 +177,8 @@ class Board {
     }
 
     //DOWN
-    for (let i = size-1; i !== -1; --i) {
-      let data = this.m_board[size*(size - 1) + i]
+    for (let i = 0; i !== size; ++i) {
+      let data = this.m_board[size*size - 1 - i]
       data.neighboor[4] = genererateurHELPER(rc_B);
       data.neighboor[5] = genererateurHELPER(rc_B);
     }
@@ -307,6 +306,11 @@ class Board {
           this.m_actualPlayer = PLAYER_TYPE.NONE
           this.m_winner = p
           console.log("Le gagnant est: ", this.m_winner)
+          const player = this.m_players[this.m_winner-1]
+          io.emit('victoire', {
+            player: player
+          })
+
           return true
         }
       }
@@ -322,6 +326,17 @@ class Board {
 
   partieTermine () {
     return this.m_actualPlayer === PLAYER_TYPE.NONE
+  }
+
+  resetGame () {
+    this.m_actualPlayer = PLAYER_TYPE.NONE
+    this.m_winner = PLAYER_TYPE.NONE
+    this.m_board = []
+    this.m_players = []
+    this.m_playedMove = 0
+    this.m_admittedBridge = Array(4)
+    this.m_nbPlayers = 0
+    this.m_size = 0
   }
 
   quiEstLeVainqueur () {
@@ -347,6 +362,10 @@ class MessageManager {
     /** @param {Message} message */
     addMessage(message) {
         this.messages.push(message)
+    }
+
+    clear () {
+      this.messages = []
     }
 }
 
@@ -386,6 +405,9 @@ io.on('connection', (socket) => {
       io.emit('clear')
     })
     socket.on('join', (data) => {
+      if (board.m_nbPlayers === 0) {
+        messageManager.clear()
+      }
       if (board.m_nbPlayers < 4) {
         board.m_nbPlayers++
         board.addPlayer(data.username)
@@ -400,7 +422,8 @@ io.on('connection', (socket) => {
     })
 
     socket.on('start', (data) => {
-      board.genererPlateau(7, 3, 0, PLAYER_TYPE.RED)
+      console.log(data)
+      board.genererPlateau(+data.size, board.m_nbPlayers, +data.bridge, PLAYER_TYPE.RED)
 
       io.emit('start_game', {
         size: board.m_size,
@@ -419,11 +442,13 @@ io.on('connection', (socket) => {
       const key = PLAYER_TYPE[player.type]
       const state = board.jouer(key, id, data.type)
 
+      console.log("actual player: ", board.m_actualPlayer)
       if (state) {
         io.emit('pion', {
           id: id,
           type: parseInt(data.type),
           player: player,
+          players: board.m_players,
           next: board.m_actualPlayer === 0
             ? {username: "Le jeu est finit"}
             : players[board.m_actualPlayer - 1],
