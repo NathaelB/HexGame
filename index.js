@@ -305,11 +305,11 @@ class Board {
         if (this.m_admittedBridge[p-1] === 0) {
           this.m_actualPlayer = PLAYER_TYPE.NONE
           this.m_winner = p
-          console.log("Le gagnant est: ", this.m_winner)
           const player = this.m_players[this.m_winner-1]
           io.emit('victoire', {
             player: player
           })
+          this.resetGame()
 
           return true
         }
@@ -402,6 +402,8 @@ server.listen(8888, () => {
 io.on('connection', (socket) => {
 
     socket.on('game_destroyed', () => {
+      board.resetGame()
+      messageManager.clear()
       io.emit('clear')
     })
     socket.on('join', (data) => {
@@ -422,7 +424,6 @@ io.on('connection', (socket) => {
     })
 
     socket.on('start', (data) => {
-      console.log(data)
       board.genererPlateau(+data.size, board.m_nbPlayers, +data.bridge, PLAYER_TYPE.RED)
 
       io.emit('start_game', {
@@ -442,7 +443,6 @@ io.on('connection', (socket) => {
       const key = PLAYER_TYPE[player.type]
       const state = board.jouer(key, id, data.type)
 
-      console.log("actual player: ", board.m_actualPlayer)
       if (state) {
         io.emit('pion', {
           id: id,
