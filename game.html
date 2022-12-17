@@ -41,10 +41,9 @@
 
                     <div class="">
                         <label class="text-base font-medium text-gray-900">Type de pion</label>
-                        <p class="text-sm leading-5 text-gray-500">How do you prefer to receive notifications?</p>
                         <fieldset class="mt-4">
                             <legend class="sr-only">Notification method</legend>
-                            <div class="space-y-4">
+                            <div class="space-y-2 ">
                                 <div class="flex items-center">
                                     <input id="color" value="" name="type-selected" type="radio" checked class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
                                     <label for="color" class="ml-3 block text-sm font-medium text-gray-700">Couleur</label>
@@ -52,17 +51,17 @@
 
                                 <div class="flex items-center">
                                     <input id="nw_se_bridge"  value="5" name="type-selected" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    <label for="nw_se_bridge" class="ml-3 block text-sm font-medium text-gray-700">NW SE BRIDGE</label>
+                                    <label for="nw_se_bridge" class="ml-3 block text-sm font-medium text-gray-700">\</label>
                                 </div>
 
                                 <div class="flex items-center">
                                     <input id="w_e_bridge" value="6" name="type-selected" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    <label for="w_e_bridge" class="ml-3 block text-sm font-medium text-gray-700">W_E BRIDGE</label>
+                                    <label for="w_e_bridge" class="ml-3 block text-sm font-medium text-gray-700">-</label>
                                 </div>
 
                                 <div class="flex items-center">
                                     <input id="ne_sw_bridge" value="7" name="type-selected" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    <label for="ne_sw_bridge" class="ml-3 block text-sm font-medium text-gray-700">NE SW BRIDGE</label>
+                                    <label for="ne_sw_bridge" class="ml-3 block text-sm font-medium text-gray-700">/</label>
                                 </div>
                             </div>
                         </fieldset>
@@ -208,6 +207,14 @@
         console.log("The game start", data)
         infoPlayerPlay.innerHTML = data.players[0].username
         genereDamier(20, 5, 5)
+        const color = document.getElementById('color')
+        let index = -1
+        for (let i = 0; i < data.players.length; i++) {
+          if (data.players[i].username === localStorage.getItem('player')) {
+            index = i
+          }
+        }
+        color.value = index + 1
 
         data.data.forEach((pion, index) => {
           if (isBorder(pion)) {
@@ -256,10 +263,10 @@
                     .attr("d", d).attr("stroke", "black").attr("fill", "white")
                     .attr("id", "h" + (colonne * nbLignes + ligne))
                     .attr("data-x", x)
+                    .attr('class', () => 'relative')
                     .attr("data-y", y)
                     .on("click", function(d) {
                         const id = d3.select(this).attr('id').split('h')[1]
-                        console.log(id)
                         let type = null
                         for (let i = 0; i < checkBox.length; i++) {
                           if (checkBox[i].checked) {
@@ -280,12 +287,84 @@
     </script>
 
     <script>
-        socket.on('pion', (data) => {
-          const hexagon = d3.select('#h' + data.id)
-            .attr('fill', data.player.type.toLowerCase())
-          infoPlayerPlay.innerHTML = data.player.username
-          console.log(data)
 
+        class LineBuilder {
+          centreX = 0
+          centreY = 0
+          char = ''
+          x = 0
+          y = 0
+
+          constructor(centreX, centreY) {
+            this.centreX = centreX
+            this.centreY = centreY
+          }
+
+          setChar (char) {
+            this.char = char
+            return this
+          }
+
+          setX (x) {
+            this.x = x
+            return this
+          }
+
+          setY (y) {
+            this.y = y
+            return this
+          }
+
+          build (line) {
+            line.text(this.char)
+              .attr("x", this.centreX+ this.x)
+              .attr("y", this.centreY+ this.y)
+              .attr('font-size', '40px')
+          }
+        }
+
+        socket.on('pion', (data) => {
+          console.log(data)
+          const hexagon = d3.select('#h' + data.id)
+
+          infoPlayerPlay.innerHTML = data.next.username
+          const x = parseInt(hexagon.attr("data-x"));
+          const y = parseInt(hexagon.attr("data-y"));
+          const centreX = x + (20 * Math.cos(Math.PI / 6));
+          const centreY = y + (20 * Math.sin(Math.PI / 6));
+
+          let line = d3.select('#tablier').select("svg").append("text")
+            .attr("x", centreX)
+            .attr("text-anchor", "middle")
+
+          switch (parseInt(data.type)) {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+              console.log(data.player.type.toLowerCase())
+              hexagon.attr('fill', data.player.type.toLowerCase())
+              break
+            case 5:
+              new LineBuilder(centreX, centreY)
+                .setChar('\\')
+                .setX(14)
+                .setY(14)
+                .build(line)
+              break
+            case 6:
+              new LineBuilder(centreX, centreY)
+                .setChar('_')
+                .setX(10)
+                .build(line)
+              break;
+            case 7:
+              new LineBuilder(centreX, centreY)
+                .setChar('/')
+                .setY(14)
+                .build(line)
+              break;
+          }
         })
     </script>
 

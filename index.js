@@ -6,18 +6,6 @@ const http = require('http')
 const server = http.createServer(app)
 const io = new require('socket.io')(server)
 
-
-function containsObject(obj, list) {
-  let i;
-  for (i = 0; i < list.length; i++) {
-    if (list[i] === obj) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 class Player {
   constructor(username, type) {
     this.username = username
@@ -84,8 +72,8 @@ class Piece {
 
 function h_find_voisins (v) {
   return (p, id) => {
-    for (const n in p.neighboor) {
-      if (containsObject(n, v)) {
+    for (const n of p.neighboor) {
+      if (v.includes(n)) {
         return true
       }
     }
@@ -124,9 +112,6 @@ class Board {
     return this.m_players
   }
 
-  getPlayer () {
-    console.log()
-  }
 
   genererPlateau (size, nbPlayers, nbPlayerBridge, startingPlayer) {
     if (size === 0) return false
@@ -174,8 +159,6 @@ class Board {
       rc_A.push([-i*2, res_sides])
       rc_B.push([-i*2 -1, res_sides])
     }
-
-    console.log(rc_A, rc_B, sides)
 
     //UP
     for (let i = 0; i !== size; ++i) {
@@ -231,13 +214,11 @@ class Board {
 
     while (l_s.length !== 0) {
       let c_p = l_s.pop()
-
-      //if (!type.includes(this.m_board[c_p].type)) continue
-      if (!containsObject(this.m_board[c_p].type, type)) continue
+      if (!type.includes(+this.m_board[c_p].type)) continue
 
       if (arret(this.m_board[c_p], c_p)) return true
 
-      for (const n in this.m_board[c_p].neighboor) {
+      for (const n of this.m_board[c_p].neighboor) {
         if (n >= 0 && n < this.m_board.length) {
           if (!visited[n]) {
             l_s.push(n)
@@ -250,54 +231,48 @@ class Board {
     return false
   }
 
-
   isBorderConnected (l_b1, l_b2, type) {
     if (this.m_board.length === 0) return false
-
-    return this.cheminPossible(0, [PIECE_TYPE.EMPTY, PIECE_TYPE.RED, PIECE_TYPE.BLUE, PIECE_TYPE.GREEN, PIECE_TYPE.VIOLET, PIECE_TYPE.NW_SE_BRIDGE, PIECE_TYPE.W_E_BRIDGE, PIECE_TYPE.NE_SW_BRIDGE],
-      (l_p, id) => {
-        for (const n in l_p.neighboor) {
-          if (n === l_b1) {
-            return this.cheminPossible(id, type, h_find_voisins([l_b2]))
-          }
+    for (let i = 0; i < this.m_board.length; i++) {
+      for (const n of this.m_board[i].neighboor) {
+        if (n === l_b1) {
+          if (this.cheminPossible(i, type, h_find_voisins([l_b2]))) return true
         }
-        return false
       }
-    )
+    }
+    return false
   }
 
   destroyConnection (l_id1, l_id2) {
-    this.m_board[l_id1].neighboor.replace(l_id2, -1)
-    this.m_board[l_id2].neighboor.replace(l_id1, -1)
+    if (l_id1 >= 0 && l_id1 < this.m_board.length) {
+      this.m_board[l_id1].neighboor.splice(l_id2, 1, -1)
+    }
+    if (l_id2 >= 0 && l_id2 < this.m_board.length) {
+      this.m_board[l_id2].neighboor.splice(l_id1, 1,-1)
+    }
   }
 
   jouer (player, subject, type) {
     if (this.m_actualPlayer === PLAYER_TYPE.NONE) {
-      console.log("actualPlayer type NONE")
       return false
     }
     if (player !== this.m_actualPlayer) {
-      console.log("Pas le tour de ce joueur")
       return false
     }
     if (subject >= this.m_board.length) {
-      console.log("On déborde là")
       return false
     }
     if (type === PIECE_TYPE.EMPTY) {
-      console.log("Le type de piece est empty")
       return false
     }
     if (this.m_board[subject].type !== PIECE_TYPE.EMPTY) {
-      console.log("la piece est déjà défini")
       return false
     }
 
-
-    if (type === PIECE_TYPE.NW_SE_BRIDGE || type === PIECE_TYPE.NE_SW_BRIDGE || type === PIECE_TYPE.W_E_BRIDGE) {
+    if (+type === PIECE_TYPE.NW_SE_BRIDGE || +type === PIECE_TYPE.NE_SW_BRIDGE || +type === PIECE_TYPE.W_E_BRIDGE) {
       if (this.m_admittedBridge[player - 1] === 0) return false
-
-      switch (type) {
+      this.m_admittedBridge[player - 1]--
+      switch (+type) {
         case PIECE_TYPE.NW_SE_BRIDGE:
           this.destroyConnection(subject, this.m_board[subject].neighboor[0]);
           this.destroyConnection(subject, this.m_board[subject].neighboor[2]);
@@ -326,9 +301,8 @@ class Board {
     this.m_playedMove++
 
     // CHECK IF PLAYER WIN
-    for (let p = 0; p !== this.m_nbPlayers; p++) {
-      if (this.isBorderConnected(-p*2, -1-p*2,[p, PIECE_TYPE.NW_SE_BRIDGE, PIECE_TYPE.NE_SW_BRIDGE, PIECE_TYPE.W_E_BRIDGE])) {
-        console.log("test de victoire")
+    for (let p = 1; p !== this.m_nbPlayers+1; p++) {
+      if (this.isBorderConnected(-p*2, -1*p*2-1,[p, PIECE_TYPE.NW_SE_BRIDGE, PIECE_TYPE.NE_SW_BRIDGE, PIECE_TYPE.W_E_BRIDGE])) {
         if (this.m_admittedBridge[p-1] === 0) {
           this.m_actualPlayer = PLAYER_TYPE.NONE
           this.m_winner = p
@@ -388,9 +362,6 @@ class Message {
 const messageManager = new MessageManager()
 
 
-
-
-
 app.get('/', (request, response) => {
     return response.sendFile('index.html', { root: __dirname })
 })
@@ -410,37 +381,26 @@ server.listen(8888, () => {
 
 
 io.on('connection', (socket) => {
-    socket.on('hello', (data) => {
-        console.log(data)
-    })
 
     socket.on('game_destroyed', () => {
       io.emit('clear')
     })
     socket.on('join', (data) => {
       if (board.m_nbPlayers < 4) {
-        console.log("Le joueur peut rentrer")
-        board.m_nbPlayers ++
+        board.m_nbPlayers++
         board.addPlayer(data.username)
       }
     })
 
     socket.on('join_resp', () => {
-      console.log("evenement actionné")
       io.emit('notif_join', {
         message: `Il y a ${board.m_nbPlayers} joueurs`,
         players: board.m_players
       })
     })
 
-    socket.on('message', (data) => {
-        console.log(data)
-    })
-
     socket.on('start', (data) => {
-      console.log(data)
-
-      board.genererPlateau(5, 2, 0, PLAYER_TYPE.RED)
+      board.genererPlateau(7, 3, 0, PLAYER_TYPE.RED)
 
       io.emit('start_game', {
         size: board.m_size,
@@ -453,48 +413,26 @@ io.on('connection', (socket) => {
     socket.on('pion', (data) => {
       const bridge = [5,6,7]
       const id = parseInt(data.case)
-      const iPlayer = board.getPlayers().find((item) => item.username === data.player)
+
       const players = board.getPlayers()
-      const key = Object.keys(PLAYER_TYPE).find((item) => {
-        if (item === iPlayer.type) return item
-      })
-      const state = board.jouer(PLAYER_TYPE[key], id, PLAYER_TYPE[key])
+      const player = board.getPlayers().find((item) => item.username === data.player)
+      const key = PLAYER_TYPE[player.type]
+      const state = board.jouer(key, id, data.type)
 
       if (state) {
         io.emit('pion', {
           id: id,
-          player: players[board.m_actualPlayer - 1],
+          type: parseInt(data.type),
+          player: player,
+          next: board.m_actualPlayer === 0
+            ? {username: "Le jeu est finit"}
+            : players[board.m_actualPlayer - 1],
           bridge: bridge.includes(data.type),
           board: board.m_board
         })
       }
 
     })
-
-
-    /* socket.on('pion', (data) => {
-        let player
-        for (let i = 0; i < joueurs.length; i++) {
-            if (joueurs[i].getUsername() === data.player) {
-                player = joueurs[i]
-            }
-        }
-        console.log('player:', player, '\ncase:', data.case)
-        if (player.color === state) {
-            if (data.case >= 0 && data.case < 122) {
-                console.log(hex[data.case])
-                if (!hex[data.case]) {
-                    console.log("test")
-                    hex[data.case] = colors.indexOf(player.color)
-                    player.color === 'red' ?
-                        state = 'blue' :
-                        state = 'red'
-                }
-            }
-            socket.emit('pion', hex)
-
-        }
-    }) */
 
     socket.on('player_join', (data) => {
         io.emit('response', joueurs)
@@ -503,7 +441,6 @@ io.on('connection', (socket) => {
     socket.on('send_message', (data) => {
       const message = new Message(data.player, data.message)
       messageManager.addMessage(message)
-      console.log(messageManager.messages)
       io.emit('chat', {
         messages: messageManager.messages
       })
