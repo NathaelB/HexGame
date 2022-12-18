@@ -7,7 +7,8 @@ const server = http.createServer(app)
 const io = new require('socket.io')(server)
 
 class Player {
-  constructor(username, type) {
+  constructor(username, type, id) {
+    this.id = id
     this.username = username
     this.type = type
   }
@@ -91,6 +92,51 @@ function genererateurHELPER (s) {
   return s[s.length-1][0]
 }
 
+function generateBorder (size, nbPlayers, board) {
+  let sides = 8*size -2
+  let res_sides = Math.ceil(sides/(2*nbPlayers))
+
+  let rc_A = []
+  let rc_B = []
+
+  for (let i = 0; i !== nbPlayers+1 ; i++) {
+    rc_A.push([-i*2, res_sides])
+    rc_B.push([-i*2 -1, res_sides])
+  }
+
+  //UP
+  for (let i = 0; i !== size; ++i) {
+    let data = board[i]
+    data.neighboor[1] = genererateurHELPER(rc_A);
+    if (i !== size - 1) {
+      data.neighboor[2] = genererateurHELPER(rc_A);
+    }
+  }
+
+  //RIGHT
+  for (let i = 0; i !== size; ++i) {
+    let data = board[i*size + size - 1]
+    data.neighboor[2] = genererateurHELPER(rc_A);
+    data.neighboor[3] = genererateurHELPER(rc_A);
+  }
+
+  //DOWN
+  for (let i = 0; i !== size; ++i) {
+    let data = board[size*size - 1 - i]
+    data.neighboor[4] = genererateurHELPER(rc_B);
+    data.neighboor[5] = genererateurHELPER(rc_B);
+  }
+
+  //LEFT
+  for (let i = size-1; i !== -1; --i) {
+    let data = board[i*size]
+    if (i !== size - 1) {
+      data.neighboor[5] = genererateurHELPER(rc_B);
+    }
+    data.neighboor[0] = genererateurHELPER(rc_B);
+  }
+}
+
 class Board {
   constructor() {
     this.m_actualPlayer = PLAYER_TYPE.NONE
@@ -104,14 +150,24 @@ class Board {
   }
 
   addPlayer (username) {
-    const player = new Player(username, Object.keys(PLAYER_TYPE).at(this.m_nbPlayers))
+    const existKey = this.m_players.map((player) => {
+      return player.id
+    })
+
+    let key = 1
+    for (let i = 1; i < 4; i++) {
+      if (!existKey.includes(i)) {
+        key = i
+        break
+      }
+    }
+    const player = new Player(username, Object.keys(PLAYER_TYPE).at(key), key)
     this.m_players.push(player)
   }
 
   getPlayers () {
     return this.m_players
   }
-
 
   genererPlateau (size, nbPlayers, nbPlayerBridge, startingPlayer) {
     if (size === 0) return false
@@ -147,9 +203,9 @@ class Board {
 
       p.type = PIECE_TYPE.EMPTY
     }
-
-    let sides = 8*size -2
-    let res_sides = Math.floor(sides/(2*nbPlayers))
+    generateBorder(size, nbPlayers, this.m_board)
+    /*let sides = 8*size -2
+    let res_sides = Math.ceil(sides/(2*nbPlayers))
 
     let rc_A = []
     let rc_B = []
@@ -190,7 +246,7 @@ class Board {
         data.neighboor[5] = genererateurHELPER(rc_B);
       }
       data.neighboor[0] = genererateurHELPER(rc_B);
-    }
+    }*/
 
     return true
   }
@@ -400,7 +456,6 @@ server.listen(8888, () => {
 
 
 io.on('connection', (socket) => {
-
     socket.on('game_destroyed', () => {
       board.resetGame()
       messageManager.clear()
@@ -414,6 +469,41 @@ io.on('connection', (socket) => {
         board.m_nbPlayers++
         board.addPlayer(data.username)
       }
+    })
+
+
+    socket.on('leave', (data) => {
+      /*const newList = []
+      console.log(data)
+      const joueur = board.m_players.find((player) => player.username === data.username)
+      const type = joueur.type
+
+      board.m_players.forEach((player) => {
+        if (player.username !== data.username) newList.push(player)
+      })
+      board.m_players = newList
+
+      if (board.m_board.length) {
+        for (let i = 0; i < board.m_board.length; i++) {
+          if (board.m_board[i].type === type) {
+            console.log("test ", board.m_board[i])
+            board.m_board[i].type = PIECE_TYPE.EMPTY
+          }
+        }
+      }
+
+      console.log(board.m_actualPlayer)
+      const key = board.m_actualPlayer
+
+      io.emit('leave_player', {
+        size: board.m_size,
+        state: board.m_actualPlayer,
+        players: board.m_players,
+        board: board.m_board,
+        next: board.m_actualPlayer === 0
+          ? {username: "Le jeu n'a pas commencé"}
+          : board.m_players[board.m_actualPlayer - 1],
+      })*/
     })
 
     socket.on('join_resp', () => {
@@ -441,7 +531,7 @@ io.on('connection', (socket) => {
       const players = board.getPlayers()
       const player = board.getPlayers().find((item) => item.username === data.player)
       const key = PLAYER_TYPE[player.type]
-      const state = board.jouer(key, id, data.type)
+      const state = board.jouer(key, id, +data.type)
 
       if (state) {
         io.emit('pion', {

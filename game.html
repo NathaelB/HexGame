@@ -178,9 +178,9 @@
       resetChild(actions)
       const buttonLeft = document.createElement('button')
       buttonLeft.className = 'inline-flex items-center text-red-100 rounded-md border border-red-400 bg-red-500 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
-      buttonLeft.innerHTML = 'Supprimer la partie'
+      buttonLeft.innerHTML = 'Détruire la partie'
       buttonLeft.onclick = () => {
-        left()
+        destroy()
       }
       if (data.players.length > 1) {
         const createGame = document.getElementById('create-game')
@@ -197,7 +197,7 @@
     }
   })
 
-  function left() {
+  function destroy() {
     socket.emit('game_destroyed')
   }
 
@@ -276,7 +276,7 @@
       li.className += ` text-${item.type.toLowerCase()}-500`
       infoPlayer.append(li)
     })
-    genereDamier(20, data.size)
+    genereDamier(20, data.data, data.size)
     const color = document.getElementById('color')
     let index = -1
     for (let i = 0; i < data.players.length; i++) {
@@ -285,15 +285,6 @@
       }
     }
     color.value = index + 1
-
-    data.data.forEach((pion, index) => {
-      if (isBorder(pion)) {
-        const color = selectColor(mode(pion.neighboor))
-
-        const hexagon = d3.select('#h' + index)
-          .attr('stroke', color)
-      }
-    })
   })
 
   function creeHexagone(rayon) {
@@ -308,7 +299,9 @@
   }
 
 
-  function genereDamier(rayon, size) {
+  function genereDamier(rayon, data, size) {
+    console.log(data)
+
     let distance = rayon - (Math.sin(Math.PI / 3) * rayon);
     distance = distance * 1.5;
     rayon = rayon * 1.5;
@@ -327,9 +320,26 @@
           else d += x + "," + y + " ";
         }
         d += "Z";
+        function color () {
+          const pion = data[colonne*size+ ligne]
+          console.log(pion)
+          switch (+pion.type) {
+            case 1:
+              return 'red'
+            case 2:
+              return 'blue'
+            case 3:
+              return 'green'
+            case 4:
+              return 'purple'
+            default:
+              return 'white'
+          }
+        }
+        console.log(color())
         d3.select("svg")
           .append("path")
-          .attr("d", d).attr("stroke", "black").attr("fill", "white")
+          .attr("d", d).attr("stroke", "black").attr("fill", color())
           .attr("id", "h" + (colonne * size + ligne))
           .attr("data-x", x)
           .attr('class', () => 'relative')
@@ -349,6 +359,23 @@
               type: type
             })
           });
+
+        //
+        for (let i = 0; i != 6; ++i)  {
+          let dec = 2
+          if (data[colonne*size + ligne].neighboor[(i + dec)%6] < -1) {
+            d3.select("svg")
+              .append("line")
+              .style("stroke", selectColor(data[colonne*size + ligne].neighboor[(dec + i)%6]))
+              .style("stroke-width", 5)
+              .attr("x1", hexagone[i][0] + (rayon - distance) * (2 + decalage + 1 * colonne))
+              .attr("y1", distance * 2 + hexagone[i][1] + (rayon - distance * 2) * (1 + 2 * colonne))
+              .attr("x2", hexagone[(i + 1)%6][0] + (rayon - distance) * (2 + decalage + 1 * colonne))
+              .attr("y2", distance * 2 + hexagone[(i + 1)%6][1] + (rayon - distance * 2) * (1 + 2 * colonne) )
+              .attr("id", "seg" + i + "-" + (colonne * size + ligne))
+          }
+        }
+        //
       }
       decalage += 2;
     }
@@ -479,6 +506,29 @@
 </script>
 
 <script>
+  socket.on('leave_player', (data) => {
+    const { size, state, players, board } = data
+    console.log(size, state, players, board)
+
+    resetChild(infoPlayer)
+    players.forEach((item,index) => {
+      const li = document.createElement('li')
+      li.innerHTML = item.username
+      if (item.username === data.next.username && board.length) {
+        li.className = 'bg-gray-800 px-2 py-1 rounded-full'
+      }
+      li.className += ` text-${item.type.toLowerCase()}-500`
+      infoPlayer.append(li)
+    })
+
+    if (board.length) {
+        const tablier = document.getElementById('tablier')
+        resetChild(tablier)
+        genereDamier(20, board, size)
+
+    }
+  })
+
   socket.on('victoire', (data) => {
     const player = data.player
     const game = document.getElementById('game').className = 'hidden'
